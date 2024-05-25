@@ -55,8 +55,94 @@ The dataset used in this analysis contains information on 5000 customers, includ
 
 
 ## Python Code
+```python
+# Importing essential libraries for data analysis and visualization
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import plotly.express as px
 
+# Reading the data from an Excel file into a DataFrame
+df = pd.read_excel('Bank_Personal_Loan_Modelling.xlsx')
 
+# Initial data exploration
+print(df.head())
+print(df.shape)
+print(df.isnull().sum())
+print(df.columns)
+
+# Data cleaning and transformation
+df.drop(['ID', 'ZIP Code'], axis=1, inplace=True)
+print(df.columns)
+
+# Visualization
+fig = px.box(df, y=['Age', 'Experience', 'Income', 'Family', 'Education'])
+fig.show()
+
+# Data analysis
+print(df.dtypes)
+print(df.skew())
+df.hist(figsize=(20, 20))
+sns.distplot(df['Experience'])
+print(df['Experience'].mean())
+
+# Handling negative 'Experience' values
+data = df.copy()
+data['Experience'] = np.where(data['Experience'] < 0, 
+                              data['Experience'].mean(), 
+                              data['Experience'])
+
+# Correlation analysis
+plt.figure(figsize=(10, 8))
+sns.heatmap(data.corr(), annot=True)
+
+# Transforming 'Education' column
+data['Edu'] = data['Education'].apply(lambda x: 'Undergrad' if x == 1 else 'Graduate' if x == 2 else 'Professional')
+
+# Visualizations
+fig = px.pie(data, names='Edu', title='Distribution of Education Levels')
+fig.show()
+
+# Account holder categories
+data['Account_Holder_Cat'] = data.apply(
+    lambda y: 'Holds Security and Deposit Account' if (y['Securities Account'] == 1) & (y['CD Account'] == 1)
+    else 'No Security and Deposit Account' if (y['Securities Account'] == 0) & (y['CD Account'] == 0)
+    else 'Holds Security But No Deposit Account' if (y['Securities Account'] == 1) & (y['CD Account'] == 0)
+    else 'No Security Account but holds Deposit Account', axis=1
+)
+fig = px.pie(data, names='Account_Holder_Cat', title='Account Holders Categories')
+fig.show()
+
+# Income and loan analysis
+sns.distplot(data[data['Personal Loan'] == 0]['Income'], hist=False, label='Income without Personal Loan')
+sns.distplot(data[data['Personal Loan'] == 1]['Income'], hist=False, label='Income with Personal Loan')
+plt.legend()
+
+# Further analysis
+def plot_distribution(col1, col2, label1, label2, title):
+    sns.distplot(data[data[col2] == 0][col1], hist=False, label=label1)
+    sns.distplot(data[data[col2] == 1][col1], hist=False, label=label2)
+    plt.legend()
+    plt.title(title)
+
+plot_distribution('Income', 'Personal Loan', 'Income without Personal Loan', 'Income with Personal Loan', 'Income vs Personal Loan')
+plot_distribution('CCAvg', 'Personal Loan', 'Credit Card avg with no personal loan', 'Credit Card avg with Personal loan', 'Credit Card Avg distribution')
+
+# Count plots for categorical features
+for feature in ['Securities Account', 'Online', 'Account_Holder_Cat', 'CreditCard']:
+    plt.figure(figsize=(10, 6))
+    sns.countplot(x=feature, data=data, hue='Personal Loan')
+
+# Handling skewness using Power Transformer
+from sklearn.preprocessing import PowerTransformer
+pt = PowerTransformer(method='yeo-johnson', standardize=False)
+data['Income'] = pt.fit_transform(data['Income'].values.reshape(-1, 1))
+
+sns.distplot(data['Income'])
+plt.show()
+
+With this closing line, the rest of the text can be formatted in its own style.
 
 ## Conclusion
 This project provides insights into customer behavior regarding personal loans, highlighting the importance of demographic and financial characteristics. By understanding these patterns, the bank can design more effective marketing strategies, targeting the right customer segments to maximize loan acceptance rates while retaining existing customers.
